@@ -1,1 +1,6 @@
 .venv
+#to build the new container image and push it to Google Container Registry, run the following command from the root directory of your project:
+#gcloud builds submit --tag gcr.io/spry-alignment-486102-n4/hello-cloud-run
+
+#to redploy the application to Cloud Run, use the following command:
+#gcloud run deploy vishalsingh-vaibhav-arora-cloud-run   --image gcr.io/spry-alignment-486102-n4/hello-cloud-run   --platform managed   --region us-central1   --allow-unauthenticated
