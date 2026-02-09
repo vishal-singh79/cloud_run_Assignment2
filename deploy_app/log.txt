@@ -1,0 +1,20 @@
+Report Generated on: Fri Feb  6 03:49:26 PM IST 2026
+Logged in user: vishalsingh
+--- Disk Usage ---
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vdc         21G  9.7G   11G  49% /
+none            492K  4.0K  488K   1% /dev
+/dev/vdc         21G  9.7G   11G  49% /dev/kvm
+tmpfs           100K     0  100K   0% /dev/lxd
+run             3.3G   24K  3.3G   1% /dev/.cros_milestone
+9p              3.9G  1.6M  3.9G   1% /mnt/chromeos
+tmpfs           3.3G     0  3.3G   0% /mnt/external
+/dev/vdb         75M   73M     0 100% /opt/google/cros-containers
+fonts           3.0G  2.6G  365M  88% /usr/share/fonts/chromeos
+tmpfs           100K     0  100K   0% /dev/.lxd-mounts
+devtmpfs        3.3G     0  3.3G   0% /dev/tty
+tmpfs           3.3G   44M  3.2G   2% /dev/shm
+tmpfs           1.3G  144K  1.3G   1% /run
+tmpfs           5.0M     0  5.0M   0% /run/lock
+tmpfs           4.0M     0  4.0M   0% /sys/fs/cgroup
+tmpfs           663M  104K  663M   1% /run/user/1000
