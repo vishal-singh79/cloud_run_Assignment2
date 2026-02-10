@@ -24,7 +24,7 @@ def read_cpu_times():
 
 def get_cpu_metric():
     global PREV_CPU
-    time.sleep(0.1)
+    time.sleep(1)
     current = read_cpu_times()
     
     prev_idle = PREV_CPU["idle"] + PREV_CPU["iowait"]
