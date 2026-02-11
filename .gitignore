@@ -1,4 +1,9 @@
 .venv
+__pycache__/
+*.pyc
+
+
+
 #to build the new container image and push it to Google Container Registry, run the following command from the root directory of your project:
 #gcloud builds submit --tag gcr.io/spry-alignment-486102-n4/hello-cloud-run
 
