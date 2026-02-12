@@ -6,12 +6,29 @@ from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# --- Global State ---
+
 START_TIME = time.time()
 CPU_HISTORY = []
 MEMORY_HISTORY = []
 
-# --- Metric Functions ---
+
+
+def get_cgroup_cpu_usage():
+    """Reads the cumulative CPU usage in microseconds from cgroup v2."""
+    try:
+       
+        if os.path.exists("/sys/fs/cgroup/cpu.stat"):
+            with open("/sys/fs/cgroup/cpu.stat", "r") as f:
+                for line in f:
+                    if line.startswith("usage_usec"):
+                        return int(line.split()[1])
+        # Fallback for Cgroup v1
+        elif os.path.exists("/sys/fs/cgroup/cpuacct/cpuacct.usage"):
+            with open("/sys/fs/cgroup/cpuacct/cpuacct.usage", "r") as f:
+                return int(f.read().strip()) // 1000
+    except:
+        return None
+    return None
 
 def get_cgroup_memory():
     try:
@@ -25,13 +42,30 @@ def get_cgroup_memory():
         return 0, 0
 
 def get_cpu_metric():
-    try:
-        load1, _, _ = os.getloadavg()
-        cpu_percent = (load1 / (os.cpu_count() or 1)) * 100
-        if cpu_percent < 0.1: cpu_percent = random.uniform(1.5, 4.0)
-    except:
-        cpu_percent = random.uniform(1.0, 5.0)
+    """Calculates real CPU % by measuring usage delta over 100ms."""
+ 
+    t1_usage = get_cgroup_cpu_usage()
+    t1_time = time.time()
     
+
+    time.sleep(0.1)
+    
+ 
+    t2_usage = get_cgroup_cpu_usage()
+    t2_time = time.time()
+
+    if t1_usage is not None and t2_usage is not None:
+      
+        usage_delta = t2_usage - t1_usage
+        time_delta = (t2_time - t1_time) * 1_000_000
+        cpu_percent = (usage_delta / time_delta) * 100
+    else:
+        # If we are not in a Linux/Cgroup environment, fallback to 0
+        cpu_percent = 0.0
+    
+  
+    cpu_percent = cpu_percent / (os.cpu_count() or 1)
+
     CPU_HISTORY.append(cpu_percent)
     return {
         "current": round(cpu_percent, 2),
@@ -82,7 +116,6 @@ def calculate_health_score(cpu, mem, uptime):
     if cpu > 90 or mem > 90: score -= 15
     return round(max(0, min(100, score)))
 
-# --- Responsive UI Template ---
 
 BASE_HTML = """
 <!DOCTYPE html>
@@ -137,7 +170,6 @@ BASE_HTML = """
             
             let history = JSON.parse(localStorage.getItem('sys_history') || '[]');
             history.unshift({
-                // Captured in user's browser local time
                 time: data.machine_time, 
                 cpu: data.cpu_metric.current,
                 mem: data.memory_metric.current,
@@ -169,7 +201,7 @@ BASE_HTML = """
 def root():
     content = """
         <h2>Container Health Monitor</h2>
-        <div class="subtitle">Monitoring: /proc & /sys/fs/cgroup</div>
+        <div class="subtitle">Real-time Cgroup CPU Delta Analysis</div>
         <button onclick="runAnalysis()" class="btn">GENERATE JSON REPORT</button>
         <a href="/logs" class="btn btn-green">VIEW HISTORICAL LOGS</a>
     """
@@ -181,7 +213,6 @@ def analyze_api():
     uptime = time.time() - START_TIME
     score = calculate_health_score(cpu['current'], mem['current'], uptime)
     
-    # machine_time captures the server's local time
     return jsonify({
         "machine_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "health_score": score,
@@ -189,7 +220,8 @@ def analyze_api():
         "memory_metric": mem,
         "container_info": {
             "uptime_seconds": round(uptime, 2),
-            "engine": mem['source_engine']
+            "engine": mem['source_engine'],
+            "cpu_cores": os.cpu_count()
         }
     })
 
@@ -243,6 +275,124 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # import os
 # import time
 # import random
@@ -256,10 +406,9 @@ if __name__ == "__main__":
 # CPU_HISTORY = []
 # MEMORY_HISTORY = []
 
-# # --- Metric Functions (The Comprehensive Engine) ---
+# # --- Metric Functions ---
 
 # def get_cgroup_memory():
-#     """Reads Cgroup V2 for precise container limits."""
 #     try:
 #         with open("/sys/fs/cgroup/memory.current", "r") as f:
 #             usage = int(f.read().strip())
@@ -271,7 +420,6 @@ if __name__ == "__main__":
 #         return 0, 0
 
 # def get_cpu_metric():
-#     """Hybrid Load Tracking with History."""
 #     try:
 #         load1, _, _ = os.getloadavg()
 #         cpu_percent = (load1 / (os.cpu_count() or 1)) * 100
@@ -288,9 +436,7 @@ if __name__ == "__main__":
 #     }
 
 # def get_memory_metric():
-#     """Detailed breakdown using Proc + Cgroup."""
 #     cg_usage, cg_limit = get_cgroup_memory()
-    
 #     try:
 #         with open("/proc/meminfo", "r") as f:
 #             m = {l.split(':')[0]: int(l.split(':')[1].split()[0]) for l in f}
@@ -299,8 +445,7 @@ if __name__ == "__main__":
     
 #     if cg_limit > 0:
 #         current_percent = (cg_usage / cg_limit) * 100
-#         total_mb = cg_limit / 1048576
-#         used_mb = cg_usage / 1048576
+#         total_mb, used_mb = cg_limit / 1048576, cg_usage / 1048576
 #         source = "cgroup_v2"
 #     else:
 #         total_mb = m['MemTotal'] / 1024
@@ -320,7 +465,6 @@ if __name__ == "__main__":
 
 # def calculate_health_score(cpu, mem, uptime):
 #     score = 100.0
-#     # Piecewise Logic
 #     if cpu < 30: score -= cpu * 0.5 
 #     elif cpu < 70: score -= (15 + (cpu - 30) * 1.0)
 #     else: score -= (55 + (cpu - 70) * 1.5)
@@ -333,7 +477,7 @@ if __name__ == "__main__":
 #     if cpu > 90 or mem > 90: score -= 15
 #     return round(max(0, min(100, score)))
 
-# # --- Responsive UI (Based on Uploaded Image) ---
+# # --- Responsive UI Template ---
 
 # BASE_HTML = """
 # <!DOCTYPE html>
@@ -349,11 +493,8 @@ if __name__ == "__main__":
 #             --grid: rgba(40, 40, 40, 0.4);
 #         }
 #         body { 
-#             background: var(--bg-color); 
-#             color: #fff; 
-#             font-family: 'Courier New', monospace; 
-#             margin: 0; 
-#             display: flex; justify-content: center; align-items: center; min-height: 100vh;
+#             background: var(--bg-color); color: #fff; font-family: 'Courier New', monospace; 
+#             margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
 #             background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
 #             background-size: 25px 25px;
 #         }
@@ -391,7 +532,8 @@ if __name__ == "__main__":
             
 #             let history = JSON.parse(localStorage.getItem('sys_history') || '[]');
 #             history.unshift({
-#                 time: new Date().toLocaleTimeString(),
+#                 // Captured in user's browser local time
+#                 time: data.machine_time, 
 #                 cpu: data.cpu_metric.current,
 #                 mem: data.memory_metric.current,
 #                 score: data.health_score
@@ -434,8 +576,9 @@ if __name__ == "__main__":
 #     uptime = time.time() - START_TIME
 #     score = calculate_health_score(cpu['current'], mem['current'], uptime)
     
+#     # machine_time captures the server's local time
 #     return jsonify({
-#         "timestamp": int(time.time()),
+#         "machine_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 #         "health_score": score,
 #         "cpu_metric": cpu,
 #         "memory_metric": mem,
