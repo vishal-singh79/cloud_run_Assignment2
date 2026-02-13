@@ -22,7 +22,7 @@ def get_cgroup_cpu_usage():
                 for line in f:
                     if line.startswith("usage_usec"):
                         return int(line.split()[1])
-        # Fallback for Cgroup v1
+        
         elif os.path.exists("/sys/fs/cgroup/cpuacct/cpuacct.usage"):
             with open("/sys/fs/cgroup/cpuacct/cpuacct.usage", "r") as f:
                 return int(f.read().strip()) // 1000
@@ -32,14 +32,16 @@ def get_cgroup_cpu_usage():
 
 def get_cgroup_memory():
     try:
-        with open("/sys/fs/cgroup/memory.current", "r") as f:
+        with open("/sys/fs/cgroup/memory/memory.usage_in_bytes", "r") as f:
             usage = int(f.read().strip())
-        with open("/sys/fs/cgroup/memory.max", "r") as f:
-            raw_max = f.read().strip()
-            limit = int(raw_max) if raw_max.isdigit() else usage * 2
+
+        with open("/sys/fs/cgroup/memory/memory.limit_in_bytes", "r") as f:
+            limit = int(f.read().strip())
+
         return usage, limit
     except:
         return 0, 0
+
 
 def get_cpu_metric():
     """Calculates real CPU % by measuring usage delta over 100ms."""
